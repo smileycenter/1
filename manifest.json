@@ -1,6 +1,6 @@
 {
   "name": "Smiley Center",
-  "short_name": "Smiley",
+  "short_name": "مركز ابتسامة",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f8fafc",
