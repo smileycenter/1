@@ -994,7 +994,7 @@ const PublicScheduleView = ({ appointments, onBack }) => {
                     reader.onload = async () => {
                         const base64Data = reader.result.split(',')[1];
                         const mimeType = file.type || 'image/jpeg';
-                        const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "AQ.Ab8RN6Ikl9pq8OvZWBuuI-qnyHd7zU7H_AofI-qfzWVVEL9uEA"; 
+                        const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "API_KEY"; 
                         
                         const payload = {
                             contents: [{
@@ -2308,7 +2308,7 @@ const DentalChart = ({ patientId, chartData, onUpdateChart }) => {
                 if(files.length === 0) return;
                 setIsAiLoading(true);
                 try {
-                    const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "AQ.Ab8RN6Ikl9pq8OvZWBuuI-qnyHd7zU7H_AofI-qfzWVVEL9uEA";
+                    const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "API_KEY";
                     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
                     
                     const imageParts = await Promise.all(files.map(async file => {
@@ -2678,7 +2678,7 @@ const [isAiLoading, setIsAiLoading] = useState(false);
         setIsAiLoading(true);
         setAiResponse('');
         const googleConfig = loadData('smile_clinic_google_v12', {});
-        const apiKey = googleConfig.geminiApiKey || "AQ.Ab8RN6Ikl9pq8OvZWBuuI-qnyHd7zU7H_AofI-qfzWVVEL9uEA"; 
+        const apiKey = googleConfig.geminiApiKey || "API_KEY"; 
         
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
@@ -2725,7 +2725,7 @@ const handleSmartRxUpload = async (e) => {
         const reader = new FileReader();
         reader.onload = async () => {
             const base64Data = reader.result.split(',')[1];
-            const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "AQ.Ab8RN6Ikl9pq8OvZWBuuI-qnyHd7zU7H_AofI-qfzWVVEL9uEA"; 
+            const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "API_KEY"; 
 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
             
@@ -2756,7 +2756,7 @@ const handleSmartRxUpload = async (e) => {
 const handleGenerateAiPlan = async () => {
     setIsAiPlanLoading(true);
     try {
-        const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "AQ.Ab8RN6Ikl9pq8OvZWBuuI-qnyHd7zU7H_AofI-qfzWVVEL9uEA"; 
+        const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "API_KEY"; 
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
         
         // تجميع الصور (الأشعة) المحفوظة للمريض
@@ -2801,7 +2801,7 @@ const generatePatientWhatsAppMsg = async (promptType) => {
         setIsLocalMsgLoading(true);
         setLocalMsgResponse('');
         try {
-            const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "AQ.Ab8RN6Ikl9pq8OvZWBuuI-qnyHd7zU7H_AofI-qfzWVVEL9uEA";
+            const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "API_KEY";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
             let promptText = "";
@@ -3021,7 +3021,7 @@ const handleSmartUsageImage = async (e) => {
         reader.onload = async () => {
             try {
                 const base64Data = reader.result.split(',')[1];
-                const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "AQ.Ab8RN6Ikl9pq8OvZWBuuI-qnyHd7zU7H_AofI-qfzWVVEL9uEA";
+                const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "API_KEY";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
                 const invNames = inventory.map(i=>i.name).join('، ');
                 const instNames = instruments.map(i=>i.name).join('، ');
@@ -3058,7 +3058,7 @@ const handleSmartUsageImage = async (e) => {
         if(!procDetails) return showMessage('تنبيه', 'اكتب تفاصيل الإجراء أولاً');
         setIsAiUsageLoading(true);
         try {
-            const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "AQ.Ab8RN6Ikl9pq8OvZWBuuI-qnyHd7zU7H_AofI-qfzWVVEL9uEA";
+            const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "API_KEY";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
             const invNames = inventory.map(i=>i.name).join('، ');
             const instNames = instruments.map(i=>i.name).join('، ');
@@ -5139,7 +5139,7 @@ const [activeTab, setActiveTab] = useState(userRole === 'admin' ? 'materials' : 
             const reader = new FileReader();
             reader.onload = async () => {
                 const base64Data = reader.result.split(',')[1];
-                const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "AQ.Ab8RN6Ikl9pq8OvZWBuuI-qnyHd7zU7H_AofI-qfzWVVEL9uEA"; 
+                const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "API_KEY"; 
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
                 const payload = {
                     contents: [{
@@ -5430,7 +5430,7 @@ const handleSmartExpense = async (e) => {
         const reader = new FileReader();
         reader.onload = async () => {
             const base64Data = reader.result.split(',')[1];
-            const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "AQ.Ab8RN6Ikl9pq8OvZWBuuI-qnyHd7zU7H_AofI-qfzWVVEL9uEA"; 
+            const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "API_KEY"; 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
             
             const payload = {
@@ -6011,7 +6011,7 @@ const getPatientMedia = () => {
         if(!socialForm.logoBase64) return showMessage('تنبيه', 'برجاء رفع الشعار أولاً.');
         setIsAiLoading(true);
         try {
-            const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "AQ.Ab8RN6Ikl9pq8OvZWBuuI-qnyHd7zU7H_AofI-qfzWVVEL9uEA";
+            const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "API_KEY";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
             const mimeType = "image/jpeg";
             const base64Data = socialForm.logoBase64.split(',')[1];
@@ -6087,7 +6087,7 @@ const callSocialGemini = async (actionType) => {
         }
 
         try {
-            const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "AQ.Ab8RN6Ikl9pq8OvZWBuuI-qnyHd7zU7H_AofI-qfzWVVEL9uEA";
+            const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "API_KEY";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
             const payload = { contents: [{ parts: [{ text: promptText }] }] };
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -6326,7 +6326,7 @@ const handleGeneratePostImage = async (mode) => {
         }
 
         try {
-            const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "AQ.Ab8RN6Ikl9pq8OvZWBuuI-qnyHd7zU7H_AofI-qfzWVVEL9uEA";
+            const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "API_KEY";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
             const payload = { contents: [{ parts: [{ text: promptText }] }], systemInstruction: { parts: [{ text: "أنت مساعد تسويقي ذكي لمركز SMILEY CENTER. مهمتك كتابة رسائل قصيرة، احترافية، وودودة جداً ترسل للمرضى عبر الواتساب." }] } };
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -7069,7 +7069,7 @@ const SettingsView = ({ patients, appointments, inventory, expenses, logs, instr
         // الإعدادات الافتراضية الثابتة في النظام
         return { 
             appsScriptUrl: newUrl, 
-            geminiApiKey: 'AQ.Ab8RN6Ikl9pq8OvZWBuuI-qnyHd7zU7H_AofI-qfzWVVEL9uEA' 
+            geminiApiKey: 'API_KEY' 
         };
     });            const [newDocName, setNewDocName] = useState('');
             const [newDocEmail, setNewDocEmail] = useState('');
@@ -7380,7 +7380,7 @@ const [socialImageModel, setSocialImageModel] = useState('gemini-3-pro-image');
         المطلوب: اكتب تقرير مختصر وواضح لتقييم الشغل الموزع على المعامل، وهل هناك معمل مسيطر على الشغل؟ واقترح نصائح لتقليل التكلفة أو التفاوض مع المعامل.`;
 
         try {
-            const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "AQ.Ab8RN6Ikl9pq8OvZWBuuI-qnyHd7zU7H_AofI-qfzWVVEL9uEA";
+            const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "API_KEY";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
             const payload = { contents: [{ parts: [{ text: promptText }] }] };
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
