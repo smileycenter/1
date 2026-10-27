@@ -994,7 +994,7 @@ const PublicScheduleView = ({ appointments, onBack }) => {
                     reader.onload = async () => {
                         const base64Data = reader.result.split(',')[1];
                         const mimeType = file.type || 'image/jpeg';
-                        const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "AQ.Ab8RN6Ikl9pq8OvZWBuuI-qnyHd7zU7H_AofI-qfzWVVEL9uEA"; 
+                        const apiKey = loadData('smile_clinic_google_v12', {}).geminiApiKey || "YOUR_FIREBASE_API_KEY"; 
                         
                         const payload = {
                             contents: [{
