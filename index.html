@@ -690,54 +690,7 @@ let systemPrompt = "";
 
 
 
-const ScheduleLogin = ({ onLoginSuccess, onBack }) => {
-            const [password, setPassword] = useState('');
-            const [error, setError] = useState(false);
 
-            const handleLogin = (e) => {
-                e.preventDefault();
-                if (password === '137900') {
-                    onLoginSuccess();
-                } else {
-                    setError(true);
-                }
-            };
-
-            return (
-                <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 text-right overflow-y-auto">
-                    <div className="bg-white w-full max-w-md p-8 rounded-3xl shadow-2xl border-2 border-brand-gold/30 relative">
-                        <button onClick={onBack} className="absolute top-6 left-6 text-slate-400 hover:text-brand-navy text-sm font-bold flex items-center gap-1">
-                            <i className="fa-solid fa-arrow-left"></i> رجوع
-                        </button>
-                        
-                        <div className="text-center mb-6">
-                            <div className="w-14 h-14 bg-brand-navy text-brand-gold rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-md">
-                                <i className="fa-solid fa-satellite-dish text-xl animate-pulse"></i>
-                            </div>
-                            <h2 className="text-xl font-bold text-brand-navy">شاشة المتابعة الحية للمواعيد</h2>
-                            <p className="text-xs text-slate-500 mt-1">SMILEY CENTER - أدخل الرمز السري لعرض المواعيد</p>
-                        </div>
-
-                        <form onSubmit={handleLogin} className="space-y-4">
-                            <div>
-                                <input 
-                                    type="password" 
-                                    placeholder="أدخل الرمز السري..." 
-                                    value={password}
-                                    onChange={(e) => { setPassword(e.target.value); setError(false); }}
-                                    className="w-full bg-slate-50 border border-slate-300 p-4 rounded-xl text-center text-lg tracking-widest font-bold outline-none focus:ring-2 focus:ring-brand-gold"
-                                    autoFocus
-                                />
-                                {error && <p className="text-red-500 text-xs font-bold text-center mt-2">برجاء كتابة الرمز الصحيح</p>}
-                            </div>
-                            <button type="submit" className="w-full bg-brand-navy hover:bg-brand-blue text-brand-gold py-4 rounded-xl font-bold text-base shadow-lg transition-all active:scale-95">
-                                عرض المواعيد
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            );
-        };
 
 
 
@@ -820,18 +773,35 @@ const StaffLogin = ({ onLoginSuccess, onBack, setUserRole }) => {
             );
         };
 
-        const ScheduleLogin = ({ onLoginSuccess, onBack }) => {
+const ScheduleLogin = ({ onLoginSuccess, onBack }) => {
             const [password, setPassword] = useState('');
             const [error, setError] = useState(false);
+            const [isLoading, setIsLoading] = useState(false);
 
             const handleLogin = (e) => {
                 e.preventDefault();
-                if (password === '137900') {
-                    onLoginSuccess();
-                } else {
-                    setError(true);
+                if (!window.firebaseAuth) {
+                    alert('نظام الحماية غير متصل، تأكد من الإنترنت.');
+                    return;
                 }
-            }; 
+
+                setIsLoading(true);
+                setError(false);
+
+                // إيميل المشاهدة الخاص بالمرضى (المخفي في الخلفية)
+                const patientEmail = 'live@smiley.com';
+
+                // تسجيل الدخول في فايربيز عشان يسمح بسحب الداتا
+                window.firebaseAuth.signInWithEmailAndPassword(patientEmail, password)
+                    .then(() => {
+                        setIsLoading(false);
+                        onLoginSuccess();
+                    })
+                    .catch((err) => {
+                        setIsLoading(false);
+                        setError(true);
+                    });
+            };
 
             return (
                 <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 text-right overflow-y-auto">
@@ -860,8 +830,8 @@ const StaffLogin = ({ onLoginSuccess, onBack, setUserRole }) => {
                                 />
                                 {error && <p className="text-red-500 text-xs font-bold text-center mt-2">برجاء كتابة الرمز الصحيح</p>}
                             </div>
-                            <button type="submit" className="w-full bg-brand-navy hover:bg-brand-blue text-brand-gold py-4 rounded-xl font-bold text-base shadow-lg transition-all active:scale-95">
-                                عرض المواعيد
+                            <button type="submit" disabled={isLoading} className="w-full bg-brand-navy hover:bg-brand-blue text-brand-gold py-4 rounded-xl font-bold text-base shadow-lg transition-all active:scale-95 disabled:opacity-50">
+                                {isLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : 'عرض المواعيد'}
                             </button>
                         </form>
                     </div>
