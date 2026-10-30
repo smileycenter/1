@@ -8073,9 +8073,10 @@ const firebaseConfig = {
                     } else {
                         // لو مش مسجل دخول، نقفل الاتصال
                         window.firebaseDb = null;
-                        window.cloudSyncReady = false;
+                       window.cloudSyncReady = false;
                     }
                 });
+            }, []);
 
                     const setupListener = (colName, setter) => {
                         db.collection('clinic_data').doc(colName).onSnapshot(snap => {
