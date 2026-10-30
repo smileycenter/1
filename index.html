@@ -8121,9 +8121,7 @@ setupListener('chatSettings', setChatSettings);
                         }
                     });
 
-                }).catch((error) => {
-                    console.error("Firebase Auth Error: ", error);
-                });
+});
             }, []);
 
             const syncToCloud = (colName, data) => {
