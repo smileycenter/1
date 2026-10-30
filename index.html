@@ -742,21 +742,83 @@ const ScheduleLogin = ({ onLoginSuccess, onBack }) => {
 
 
 const StaffLogin = ({ onLoginSuccess, onBack, setUserRole }) => {
-            const [password, setPassword] = useState('');
-            const [error, setError] = useState(false);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
-            const handleLogin = (e) => {
-                e.preventDefault();
-                if (password === '137900') {
-                    setUserRole('admin'); 
-                    onLoginSuccess();
-                } else if (password === '224466') { 
-                    setUserRole('receptionist'); 
-                    onLoginSuccess();
+    const handleLogin = (e) => {
+        e.preventDefault();
+        if (!window.firebaseAuth) {
+            alert('نظام الحماية غير متصل، تأكد من الإنترنت.');
+            return;
+        }
+
+        setIsLoading(true);
+        setError(false);
+
+        // هنا السحر: بنسأل سيرفرات جوجل عن صحة البيانات
+        window.firebaseAuth.signInWithEmailAndPassword(email, password)
+            .then((userCredential) => {
+                // لو الإيميل بتاع الأدمن، نديله صلاحيات كاملة
+                if (userCredential.user.email === 'admin@smiley.com') { // حط إيميل الأدمن اللي عملته في فايربيز هنا
+                    setUserRole('admin');
                 } else {
-                    setError(true);
+                    setUserRole('receptionist'); // أي إيميل تاني هيكون استقبال
                 }
-            };
+                setIsLoading(false);
+                onLoginSuccess();
+            })
+            .catch((err) => {
+                setIsLoading(false);
+                setError(true);
+            });
+    };
+
+    return (
+        <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 text-right overflow-y-auto">
+            <div className="bg-white w-full max-w-md p-8 rounded-3xl shadow-2xl border-2 border-brand-gold/30 relative">
+                <button onClick={onBack} className="absolute top-6 left-6 text-slate-400 hover:text-brand-navy text-sm font-bold flex items-center gap-1">
+                    <i className="fa-solid fa-arrow-left"></i> رجوع
+                </button>
+                
+                <div className="text-center mb-6">
+                    <div className="w-14 h-14 bg-brand-navy text-brand-gold rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-md">
+                        <i className="fa-solid fa-lock text-xl"></i>
+                    </div>
+                    <h2 className="text-xl font-bold text-brand-navy">تسجيل دخول طاقم العيادة</h2>
+                    <p className="text-xs text-slate-500 mt-1">SMILEY CENTER - أدخل بياناتك المعتمدة</p>
+                </div>
+
+                <form onSubmit={handleLogin} className="space-y-4">
+                    <div>
+                        <input 
+                            type="email" 
+                            placeholder="البريد الإلكتروني..." 
+                            value={email}
+                            onChange={(e) => { setEmail(e.target.value); setError(false); }}
+                            className="w-full bg-slate-50 border border-slate-300 p-4 rounded-xl text-center text-sm font-bold outline-none focus:ring-2 focus:ring-brand-gold mb-3"
+                            dir="ltr"
+                            autoFocus
+                        />
+                        <input 
+                            type="password" 
+                            placeholder="كلمة المرور..." 
+                            value={password}
+                            onChange={(e) => { setPassword(e.target.value); setError(false); }}
+                            className="w-full bg-slate-50 border border-slate-300 p-4 rounded-xl text-center text-lg tracking-widest font-bold outline-none focus:ring-2 focus:ring-brand-gold"
+                            dir="ltr"
+                        />
+                        {error && <p className="text-red-500 text-xs font-bold text-center mt-2">البريد أو كلمة المرور غير صحيحة</p>}
+                    </div>
+                    <button type="submit" disabled={isLoading} className="w-full bg-brand-navy hover:bg-brand-blue text-brand-gold py-4 rounded-xl font-bold text-base shadow-lg transition-all active:scale-95 disabled:opacity-50">
+                        {isLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : 'دخول النظام'}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+};
 
             return (
 
@@ -7980,12 +8042,59 @@ const firebaseConfig = {
                     firebase.initializeApp(firebaseConfig);
                 }
 
-                const auth = firebase.auth();
+ const auth = firebase.auth();
                 const db = firebase.firestore();
+                window.firebaseAuth = auth; // حفظناها عشان شاشة الدخول تستخدمها
 
-                auth.signInAnonymously().then(() => {
-                    window.firebaseDb = db;
-                    window.cloudSyncReady = true;
+                // نظام مراقبة حالة الدخول (لو مسجل هيفتح الداتا، لو مش مسجل هيقفلها)
+                auth.onAuthStateChanged((user) => {
+                    if (user) {
+                        window.firebaseDb = db;
+                        window.cloudSyncReady = true;
+
+                        const setupListener = (colName, setter) => {
+                            db.collection('clinic_data').doc(colName).onSnapshot(snap => {
+                                if (snap.metadata.hasPendingWrites) return; 
+                                if (snap.exists) {
+                                    const cloudData = snap.data().data;
+                                    if (cloudData) {
+                                        const dataStr = JSON.stringify(cloudData);
+                                        if (lastSyncRefs.current[colName] !== dataStr) {
+                                            lastSyncRefs.current[colName] = dataStr;
+                                            setter(cloudData);
+                                        }
+                                    }
+                                }
+                            });
+                        };
+
+                        setupListener('patients', setPatients);
+                        setupListener('appointments', setAppointments);
+                        setupListener('inventory', setInventory);
+                        setupListener('instruments', setInstruments);
+                        setupListener('logs', setLogs);
+                        setupListener('expenses', setExpenses);
+                        setupListener('chatSettings', setChatSettings);
+                        
+                        db.collection('clinic_data').doc('settings').onSnapshot(snap => {
+                            if (snap.metadata.hasPendingWrites) return; 
+                            if (snap.exists) {
+                                const cloudData = snap.data().data;
+                                if (cloudData) {
+                                    cloudData.appsScriptUrl = "https://script.google.com/macros/s/AKfycbybXcH9nVYhklY3rwYZZAk04HabWa1pyzAMI1b3roz8Cl3WEurWs6SoZ0tWXmPeaFJZ/exec";
+                                    if (!cloudData.doctors || !Array.isArray(cloudData.doctors)) {
+                                        cloudData.doctors = [];
+                                    }
+                                    saveData('smile_clinic_google_v12', cloudData);
+                                }
+                            }
+                        });
+                    } else {
+                        // لو مش مسجل دخول، نقفل الاتصال
+                        window.firebaseDb = null;
+                        window.cloudSyncReady = false;
+                    }
+                });
 
                     const setupListener = (colName, setter) => {
                         db.collection('clinic_data').doc(colName).onSnapshot(snap => {
