@@ -8007,10 +8007,10 @@ useEffect(() => { saveData('smile_clinic_social_v1', socialPosts); syncToCloud('
                 patients: '', appointments: '', inventory: '', instruments: '', logs: '', expenses: ''
             });
 
-            useEffect(() => {
+ useEffect(() => {
                 if (!window.firebase) return;
                 
-const firebaseConfig = {
+                const firebaseConfig = {
                     apiKey: "AIzaSyCVVTHfz3B_XZ3tJkjdQphMkOuvJRDVosg",
                     authDomain: "smiley-3a01f.firebaseapp.com",
                     projectId: "smiley-3a01f",
@@ -8023,7 +8023,7 @@ const firebaseConfig = {
                     firebase.initializeApp(firebaseConfig);
                 }
 
- const auth = firebase.auth();
+                const auth = firebase.auth();
                 const db = firebase.firestore();
                 window.firebaseAuth = auth; // حفظناها عشان شاشة الدخول تستخدمها
 
@@ -8073,57 +8073,10 @@ const firebaseConfig = {
                     } else {
                         // لو مش مسجل دخول، نقفل الاتصال
                         window.firebaseDb = null;
-                       window.cloudSyncReady = false;
+                        window.cloudSyncReady = false;
                     }
                 });
             }, []);
-
-                    const setupListener = (colName, setter) => {
-                        db.collection('clinic_data').doc(colName).onSnapshot(snap => {
-                            if (snap.metadata.hasPendingWrites) return; 
-                            if (snap.exists) {
-                                const cloudData = snap.data().data;
-                                if (cloudData) {
-                                    const dataStr = JSON.stringify(cloudData);
-                                    if (lastSyncRefs.current[colName] !== dataStr) {
-                                        lastSyncRefs.current[colName] = dataStr;
-                                        setter(cloudData);
-                                    }
-                                }
-                            }
-                        });
-                    };
-
-                    setupListener('patients', setPatients);
-                    setupListener('appointments', setAppointments);
-                    setupListener('inventory', setInventory);
-                    setupListener('instruments', setInstruments);
-                    setupListener('logs', setLogs);
-                    setupListener('expenses', setExpenses);
-setupListener('chatSettings', setChatSettings);
-// استدعاء ملف الإعدادات وقائمة الأطباء من الفاير بيز
-                    db.collection('clinic_data').doc('settings').onSnapshot(snap => {
-                        if (snap.metadata.hasPendingWrites) return; 
-                        if (snap.exists) {
-                            const cloudData = snap.data().data;
-                            if (cloudData) {
-                                // فرض تثبيت الرابط السحري دايماً لحماية البرنامج
-                                cloudData.appsScriptUrl = "https://script.google.com/macros/s/AKfycbybXcH9nVYhklY3rwYZZAk04HabWa1pyzAMI1b3roz8Cl3WEurWs6SoZ0tWXmPeaFJZ/exec";
-                                
-                                // ضمان إن قائمة الدكاترة موجودة ومتمسحتش
-                                if (!cloudData.doctors || !Array.isArray(cloudData.doctors)) {
-                                    cloudData.doctors = [];
-                                }
-                                
-                                // حفظ البيانات الجاية من السحابة في الذاكرة المحلية
-                                saveData('smile_clinic_google_v12', cloudData);
-                            }
-                        }
-                    });
-
-});
-            }, []);
-
             const syncToCloud = (colName, data) => {
                 if (window.cloudSyncReady && window.firebaseDb) {
                     const dataStr = JSON.stringify(data);
