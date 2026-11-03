@@ -3530,6 +3530,20 @@ const bookAppointment = (time, patientId, durationInMins, specificDate = selecte
             <div className="p-4 md:px-0 space-y-4">
                 {patientTab === 'info' && (
                     <div className="animate-fade-in space-y-4">
+                        {/* كارت رقم الملف لخدمة العملاء */}
+                        <div className="bg-gradient-to-r from-brand-navy to-brand-blue p-4 rounded-2xl shadow-md text-white flex justify-between items-center">
+                            <div>
+                                <span className="text-xs text-brand-gold font-bold block mb-1">رقم الملف السري (لخدمة العملاء):</span>
+                                <span className="text-3xl font-bold tracking-[0.2em] drop-shadow-md">{patient.fileNumber || 'جاري الإنشاء...'}</span>
+                            </div>
+                            <button 
+                                onClick={() => { navigator.clipboard.writeText(patient.fileNumber); alert('تم نسخ رقم الملف بنجاح!'); }} 
+                                className="bg-white/10 hover:bg-white/20 p-3 rounded-xl transition-colors border border-white/20"
+                                title="نسخ رقم الملف"
+                            >
+                                <i className="fa-regular fa-copy text-xl"></i>
+                            </button>
+                        </div>
                         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-3 mb-4 gap-3">
                                 <h3 className="font-bold text-slate-800"><i className="fa-solid fa-address-card text-brand-navy ml-2"></i>البيانات الأساسية</h3>
@@ -7628,6 +7642,25 @@ const StaffApp = ({ userRole,
             instruments, setInstruments, logs, setLogs, expenses, setExpenses, 
             selectedDate, setSelectedDate, handleExportData, handleImportData, showMessage, showConfirm, onReturnToLanding, forceSyncToCloud 
         }) => {
+    // نظام التوليد التلقائي لأرقام ملفات المرضى
+    useEffect(() => {
+        if (patients && patients.length > 0) {
+            let needsUpdate = false;
+            const updatedPatients = patients.map(p => {
+                if (!p.fileNumber) {
+                    needsUpdate = true;
+                    // إنشاء رقم ملف فريد من 6 أرقام
+                    const uniqueFileNumber = Math.floor(100000 + Math.random() * 900000).toString();
+                    return { ...p, fileNumber: uniqueFileNumber };
+                }
+                return p;
+            });
+            if (needsUpdate) {
+                setPatients(updatedPatients); // تحديث المرضى وحفظهم تلقائياً في السحابة
+            }
+        }
+    }, [patients, setPatients]);
+    
             const [currentView, setCurrentView] = useState('patients'); 
             const [activePatientId, setActivePatientId] = useState(null);
             const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
