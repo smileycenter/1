@@ -368,8 +368,7 @@ const AIChatSettingsView = ({ chatSettings, setChatSettings }) => {
  const PatientChatbotWidget = ({ patients, appointments, setPatients, setAppointments, chatSettings, customTrigger }) => {
             const [isOpen, setIsOpen] = useState(false);
             const [mode, setMode] = useState('select'); // select, new_patient, followup_auth, followup_chat
-            const [searchQuery, setSearchQuery] = useState('');
-            const [matchingPatients, setMatchingPatients] = useState([]);
+           const [fileNumberInput, setFileNumberInput] = useState('');
             const [activeUser, setActiveUser] = useState(null);
             const [chatMsgs, setChatMsgs] = useState([]);
             const [inputMsg, setInputMsg] = useState('');
@@ -383,25 +382,35 @@ const AIChatSettingsView = ({ chatSettings, setChatSettings }) => {
             const startFollowup = () => setMode('followup_auth');
 
             // التعديل: بحث متقدم بالاسم أو رقم الهاتف وإظهار النتائج المتشابهة
-            const verifyFollowup = () => {
-                if(!searchQuery.trim()) return alert("برجاء إدخال الاسم أو رقم الهاتف");
-                const matches = patients.filter(p => (p.phone && p.phone.includes(searchQuery)) || (p.name && p.name.includes(searchQuery)));
-                if(matches.length === 1) {
-                    selectPatientForChat(matches[0]);
-                } else if (matches.length > 1) {
-                    setMatchingPatients(matches);
+          // التعديل: الدخول برقم الملف وتسجيل دخول خفي لقاعدة البيانات
+            const verifyFileNumber = () => {
+                if(!fileNumberInput.trim() || fileNumberInput.length < 5) return alert("برجاء إدخال رقم ملف صحيح");
+                
+                // البحث برقم الملف
+                const patient = patients.find(p => p.fileNumber === fileNumberInput.trim());
+                
+                if (patient) {
+                    // الدخول المخفي بحساب المشاهدة عشان فايربيز يسمح للذكاء الاصطناعي يسحب الداتا
+                    if (window.firebaseAuth) {
+                        setIsLoading(true);
+                        window.firebaseAuth.signInWithEmailAndPassword('live@smiley.com', '137900')
+                            .then(() => {
+                                setIsLoading(false);
+                                setActiveUser(patient);
+                                setMode('followup_chat');
+                                setChatMsgs([{ role: 'bot', text: `أهلاً بك مرة تانية أ. ${patient.name}. ملفك الطبي (${patient.fileNumber}) مفتوح قدامي دلوقتي، أقدر أساعدك في إيه؟` }]);
+                            })
+                            .catch(err => {
+                                setIsLoading(false);
+                                alert('حدث خطأ في الاتصال بقاعدة البيانات. تأكد من الإنترنت.');
+                            });
+                    } else {
+                        alert("عذراً، نظام الحماية غير متصل حالياً.");
+                    }
                 } else {
-                    alert('عذراً، لم نجد ملف بهذا الاسم أو الرقم. تأكد من البيانات أو اختر "كشف جديد".');
+                    alert('عذراً، لم نجد ملف بهذا الرقم. تأكد من الرقم أو اختر "كشف جديد".');
                 }
             };
-
-            const selectPatientForChat = (patient) => {
-                setActiveUser(patient);
-                setMode('followup_chat');
-                setMatchingPatients([]);
-                setChatMsgs([{ role: 'bot', text: `أهلاً بك مرة تانية أ. ${patient.name}. ملفك الطبي قدامي دلوقتي، أقدر أساعدك في إيه؟ (تقدر تسأل عن أدويتك، مواعيدك الجاية، أو أي استفسار طبي بخصوص حالتك)` }]);
-            };
-
             const handleSend = async () => {
                 if(!inputMsg.trim()) return;
                 const userMsg = inputMsg;
@@ -567,7 +576,7 @@ let systemPrompt = "";
                                 <div><h3 className="font-bold text-brand-gold">خدمة عملاء {chatSettings.clinicName}</h3><p className="text-[10px] text-slate-300">مساعد ذكي يعمل بالذكاء الاصطناعي</p></div>
                                 <div className="flex gap-2">
                                     <button onClick={()=>window.open(`tel:${chatSettings.phone}`, '_self')} className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center hover:bg-green-600 shadow-sm" title="طوارئ - اتصل بالعيادة"><i className="fa-solid fa-phone"></i></button>
-                                    <button onClick={()=>{setIsOpen(false); setMode('select'); setChatMsgs([]); setSearchQuery(''); setMatchingPatients([]);}} className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/40"><i className="fa-solid fa-xmark"></i></button>
+                                    <button onClick={()=>{setIsOpen(false); setMode('select'); setChatMsgs([]); setFileNumberInput('');}} className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/40"><i className="fa-solid fa-xmark"></i></button>
                                 </div>
                             </div>
 
@@ -578,31 +587,20 @@ let systemPrompt = "";
                                         <div className="w-20 h-20 bg-brand-light rounded-full flex items-center justify-center text-brand-navy text-4xl mb-2"><i className="fa-solid fa-tooth"></i></div>
                                         <h3 className="font-bold text-slate-800">أهلاً بك! إزاي نقدر نساعدك؟</h3>
                                         <button onClick={startNewConsultation} className="w-full bg-brand-navy text-brand-gold py-3.5 rounded-xl font-bold shadow-md hover:bg-brand-blue flex items-center justify-center gap-2"><i className="fa-solid fa-calendar-plus"></i> كشف جديد / استفسار</button>
-                                        <button onClick={startFollowup} className="w-full bg-white border-2 border-brand-navy text-brand-navy py-3.5 rounded-xl font-bold shadow-sm hover:bg-slate-100 flex items-center justify-center gap-2"><i className="fa-solid fa-rotate-left"></i> متابعة حالة مسجلة</button>
+                                       <button onClick={startFollowup} className="w-full bg-white border-2 border-brand-navy text-brand-navy py-3.5 rounded-xl font-bold shadow-sm hover:bg-slate-100 flex items-center justify-center gap-2"><i className="fa-solid fa-folder-open"></i> الدخول برقم الملف</button>
                                     </div>
                                 )}
 
-                                {mode === 'followup_auth' && (
+{mode === 'followup_auth' && (
                                     <div className="h-full flex flex-col items-center justify-center space-y-4 text-center p-4">
-                                        <i className="fa-solid fa-users-viewfinder text-4xl text-slate-400 mb-2"></i>
-                                        <p className="font-bold text-slate-700 text-sm">برجاء إدخال (الاسم) أو (رقم الهاتف) للبحث عن ملفك الطبي:</p>
-                                        <input type="text" value={searchQuery} onChange={e=>{setSearchQuery(e.target.value); setMatchingPatients([]);}} className="w-full border-2 border-slate-300 p-3 rounded-xl text-center font-bold outline-none focus:border-brand-navy" placeholder="الاسم أو رقم الهاتف..." />
-                                        
-                                        {matchingPatients.length > 0 ? (
-                                            <div className="w-full space-y-2 mt-2 max-h-48 overflow-y-auto bg-white p-2 rounded-xl border shadow-inner">
-                                                <p className="text-xs text-brand-navy font-bold mb-2">وجدنا أكثر من ملف، برجاء اختيار ملفك:</p>
-                                                {matchingPatients.map(p => (
-                                                    <button key={p.id} onClick={() => selectPatientForChat(p)} className="w-full bg-slate-50 hover:bg-slate-200 border border-slate-200 p-3 rounded-lg text-sm font-bold flex flex-col items-start gap-1">
-                                                        <span className="text-brand-navy">{p.name}</span>
-                                                        <span className="text-xs text-slate-500" dir="ltr"><i className="fa-solid fa-phone ml-1"></i>{p.phone}</span>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <button onClick={verifyFollowup} className="w-full bg-brand-navy text-brand-gold py-3 rounded-xl font-bold shadow-md">بحث وبدء المحادثة</button>
-                                        )}
-
-                                        <button onClick={()=>setMode('select')} className="text-sm text-slate-500 font-bold underline">رجوع</button>
+                                        <i className="fa-solid fa-file-medical text-5xl text-brand-gold mb-2"></i>
+                                        <h3 className="font-bold text-brand-navy">ملفك الطبي الخاص</h3>
+                                        <p className="text-slate-600 text-sm font-medium mb-2">برجاء إدخال رقم الملف السري المكون من 6 أرقام للوصول لبياناتك:</p>
+                                        <input type="text" value={fileNumberInput} onChange={e=>setFileNumberInput(e.target.value)} className="w-full border-2 border-slate-300 p-4 rounded-xl text-center text-2xl tracking-[0.3em] font-bold outline-none focus:border-brand-navy" placeholder="000000" dir="ltr" autoFocus />
+                                        <button onClick={verifyFileNumber} disabled={isLoading} className="w-full bg-brand-navy text-brand-gold py-3 rounded-xl font-bold shadow-md disabled:opacity-50">
+                                            {isLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : 'دخول'}
+                                        </button>
+                                        <button onClick={()=>setMode('select')} className="text-sm text-slate-500 font-bold underline mt-2">رجوع</button>
                                     </div>
                                 )}
 
