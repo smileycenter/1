@@ -383,34 +383,24 @@ const AIChatSettingsView = ({ chatSettings, setChatSettings }) => {
 
             // التعديل: بحث متقدم بالاسم أو رقم الهاتف وإظهار النتائج المتشابهة
           // التعديل: الدخول برقم الملف وتسجيل دخول خفي لقاعدة البيانات
+           // دالة التحقق من رقم الملف (بدون انتظار لأن البرنامج متصل صامتاً)
             const verifyFileNumber = () => {
                 if(!fileNumberInput.trim() || fileNumberInput.length < 5) return alert("برجاء إدخال رقم ملف صحيح");
                 
-                // البحث برقم الملف
+                // البحث برقم الملف في البيانات اللي اتسحبت في الخلفية
                 const patient = patients.find(p => p.fileNumber === fileNumberInput.trim());
                 
                 if (patient) {
-                    // الدخول المخفي بحساب المشاهدة عشان فايربيز يسمح للذكاء الاصطناعي يسحب الداتا
-                    if (window.firebaseAuth) {
-                        setIsLoading(true);
-                        window.firebaseAuth.signInWithEmailAndPassword('live@smiley.com', '137900')
-                            .then(() => {
-                                setIsLoading(false);
-                                setActiveUser(patient);
-                                setMode('followup_chat');
-                                setChatMsgs([{ role: 'bot', text: `أهلاً بك مرة تانية أ. ${patient.name}. ملفك الطبي (${patient.fileNumber}) مفتوح قدامي دلوقتي، أقدر أساعدك في إيه؟` }]);
-                            })
-                            .catch(err => {
-                                setIsLoading(false);
-                                alert('حدث خطأ في الاتصال بقاعدة البيانات. تأكد من الإنترنت.');
-                            });
-                    } else {
-                        alert("عذراً، نظام الحماية غير متصل حالياً.");
-                    }
+                    setActiveUser(patient);
+                    setMode('followup_chat');
+                    setChatMsgs([{ role: 'bot', text: `أهلاً بك مرة تانية أ. ${patient.name}. ملفك الطبي (${patient.fileNumber}) مفتوح قدامي دلوقتي، أقدر أساعدك في إيه؟` }]);
                 } else {
                     alert('عذراً، لم نجد ملف بهذا الرقم. تأكد من الرقم أو اختر "كشف جديد".');
                 }
             };
+
+
+     
             const handleSend = async () => {
                 if(!inputMsg.trim()) return;
                 const userMsg = inputMsg;
@@ -8101,10 +8091,11 @@ useEffect(() => { saveData('smile_clinic_social_v1', socialPosts); syncToCloud('
                                 }
                             }
                         });
-                    } else {
-                        // لو مش مسجل دخول، نقفل الاتصال
+                   } else {
+                        // السحر هنا: لو الأدمن مش فاتح، البرنامج هيسجل دخول صامت كـ "خدمة عملاء" عشان الشات بوت يسحب الداتا
                         window.firebaseDb = null;
                         window.cloudSyncReady = false;
+                        auth.signInWithEmailAndPassword('live@smiley.com', '137900');
                     }
                 });
             }, []);
