@@ -2590,6 +2590,206 @@ const PatientDetails = ({
     
     const [patientTab, setPatientTab] = useState('info'); 
 
+    // متغيرات نظام الروشتات الذكية (بدون تكرار سطر تعريف الدالة فوقها)
+    const [rxItems, setRxItems] = useState([{ name: '', type: 'أقراص (Tab)', dose: '' }]);
+    const [rxTemplates, setRxTemplates] = useState(() => JSON.parse(localStorage.getItem('smile_rx_templates')) || []);
+
+    const [templateName, setTemplateName] = useState('');
+    const [showPrintSettings, setShowPrintSettings] = useState(false);
+const [printSettings, setPrintSettings] = useState(() => JSON.parse(localStorage.getItem('smile_print_settings')) || {
+        doctorName: 'د. أنور سامي', specialty: 'طبيب وجراح الفم والأسنان', clinicName: 'مركز ابتسامة', logoUrl: 'logo.png', address: 'قرية الرياض - بجوار الوحدة الصحية', phone: '01152453045'
+    });
+    // دالة الطباعة بمقاس A5
+// دالة الطباعة بمقاس A5 (بدون وسم script داخلي لمنع تعارض المتصفح)
+        const handlePrintRx = () => {
+            const printWindow = window.open('', '_blank');
+            const today = new Date().toLocaleDateString('ar-EG');
+            
+            const medsHtml = rxItems.filter(i => i.name).map(item => 
+                '<div class="med-item">' +
+                    '<div class="med-name">' + item.name + ' <span class="med-type">(' + item.type + ')</span></div>' +
+                    '<div class="med-dose">' + item.dose + '</div>' +
+                '</div>'
+            ).join('');
+
+            const html = `
+                <html dir="rtl">
+                <head>
+                    <title>روشتة - ${patient.name}</title>
+                    <style>
+                        body { font-family: 'Tahoma', sans-serif; margin: 0; padding: 0; color: #0b2545; }
+                        .a5-page { width: 148mm; min-height: 210mm; padding: 25px; box-sizing: border-box; margin: auto; position: relative; }
+                        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #C5A880; padding-bottom: 15px; margin-bottom: 20px; }
+                        .doc-info h2 { margin: 0 0 5px 0; color: #0b2545; font-size: 24px; }
+                        .doc-info p { margin: 0; font-size: 14px; font-weight: bold; color: #555; }
+                        .logo { width: 80px; height: 80px; object-fit: contain; }
+                        .clinic-info { text-align: left; }
+                        .clinic-info h2 { margin: 0; color: #C5A880; font-size: 22px; }
+                        .patient-box { background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; font-size: 15px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; }
+                        .rx-mark { font-size: 45px; font-family: serif; color: #0b2545; font-weight: bold; margin-bottom: 20px; font-style: italic; }
+                        .medicines { min-height: 350px; }
+                        .med-item { margin-bottom: 25px; padding-right: 15px; border-right: 4px solid #C5A880; }
+                        .med-name { font-size: 20px; font-weight: bold; color: #0b2545; }
+                        .med-type { font-size: 14px; color: #C5A880; margin-right: 8px; }
+                        .med-dose { font-size: 16px; color: #333; margin-top: 8px; font-weight: bold; }
+                        .footer { position: absolute; bottom: 25px; left: 25px; right: 25px; border-top: 2px solid #C5A880; padding-top: 15px; display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; color: #64748b; }
+                        @media print {
+                            body { background: white; }
+                            @page { size: A5; margin: 0; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="a5-page">
+                        <div class="header">
+<div class="doc-info">
+                                <h2>${printSettings.doctorName}</h2>
+                                <p>${printSettings.specialty || 'طبيب وجراح الفم والأسنان'}</p>
+                            </div>
+
+
+                            <img src="${printSettings.logoUrl}" class="logo" onerror="this.style.display='none'" />
+                            <div class="clinic-info">
+                                <h2>${printSettings.clinicName}</h2>
+                            </div>
+                        </div>
+                        <div class="patient-box">
+                            <span>اسم المريض: ${patient.name}</span>
+                            <span>التاريخ: ${today}</span>
+                        </div>
+                        <div class="rx-mark">Rx</div>
+                        <div class="medicines">
+                            ${medsHtml}
+                        </div>
+                        <div class="footer">
+                            <div>العنوان: ${printSettings.address}</div>
+                            <div>تليفون: ${printSettings.phone}</div>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+            printWindow.document.write(html);
+            printWindow.document.close();
+            
+            // تشغيل الطباعة مباشرة من هنا بدل كتابة وسم script يقطع الصفحة
+            setTimeout(() => {
+                printWindow.focus();
+                printWindow.print();
+                printWindow.close();
+            }, 500);
+        };
+
+
+
+// --- متغيرات ودالة طباعة الفاتورة (A5) ---
+        const [selectedInvoiceProcs, setSelectedInvoiceProcs] = useState([]);
+        const [showInvoiceSettings, setShowInvoiceSettings] = useState(false);
+
+        // تفريغ التحديد عند تغيير المريض
+        useEffect(() => { setSelectedInvoiceProcs([]); }, [patient.id]);
+
+        const toggleInvoiceProc = (procId) => {
+            setSelectedInvoiceProcs(prev => prev.includes(procId) ? prev.filter(id => id !== procId) : [...prev, procId]);
+        };
+
+        const handlePrintInvoice = () => {
+            const procsToPrint = (patient.procedures || []).filter(p => selectedInvoiceProcs.includes(p.id));
+            if (procsToPrint.length === 0) return showMessage('تنبيه', 'برجاء تحديد إجراء واحد على الأقل من قائمة الإجراءات المنفذة لطباعته في الفاتورة!');
+
+            const invoiceTotal = procsToPrint.reduce((sum, p) => sum + Number(p.price || 0), 0);
+            const printWindow = window.open('', '_blank');
+            const today = new Date().toLocaleDateString('ar-EG');
+
+            const rowsHtml = procsToPrint.map((item, idx) =>
+                '<tr>' +
+                    '<td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center; font-weight: bold;">' + (idx + 1) + '</td>' +
+                    '<td style="padding: 10px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #0b2545;">' + item.name + '</td>' +
+                    '<td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: center; color: #64748b; font-size: 13px;">' + (item.date || '-') + '</td>' +
+                    '<td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: left; font-weight: bold; color: #0b2545;">' + Number(item.price).toLocaleString() + ' ج.م</td>' +
+                '</tr>'
+            ).join('');
+
+            const html = `
+                <html dir="rtl">
+                <head>
+                    <title>فاتورة - ${patient.name}</title>
+                    <style>
+                        body { font-family: 'Tahoma', sans-serif; margin: 0; padding: 0; color: #0b2545; }
+                        .a5-page { width: 148mm; min-height: 210mm; padding: 25px; box-sizing: border-box; margin: auto; position: relative; }
+                        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #C5A880; padding-bottom: 15px; margin-bottom: 15px; }
+                        .doc-info h2 { margin: 0 0 5px 0; color: #0b2545; font-size: 22px; }
+                        .doc-info p { margin: 0; font-size: 13px; font-weight: bold; color: #555; }
+                        .logo { width: 75px; height: 75px; object-fit: contain; }
+                        .clinic-info { text-align: left; }
+                        .clinic-info h2 { margin: 0; color: #C5A880; font-size: 20px; }
+                        .invoice-title { text-align: center; font-size: 18px; font-weight: bold; background: #0b2545; color: #C5A880; padding: 7px; border-radius: 8px; margin-bottom: 15px; letter-spacing: 1px; }
+                        .patient-box { background: #f8fafc; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; font-size: 14px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px; }
+                        th { background: #f1f5f9; color: #0b2545; padding: 10px; border-bottom: 2px solid #cbd5e1; text-align: right; }
+                        .total-box { background: #fdfaf6; border: 2px solid #C5A880; padding: 12px 18px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; color: #0b2545; margin-top: 15px; }
+                        .footer { position: absolute; bottom: 25px; left: 25px; right: 25px; border-top: 2px solid #C5A880; padding-top: 12px; display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: #64748b; }
+                        @media print {
+                            body { background: white; }
+                            @page { size: A5; margin: 0; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="a5-page">
+                        <div class="header">
+                            <div class="doc-info">
+                                <h2>${printSettings.doctorName}</h2>
+                                <p>${printSettings.specialty || 'طبيب وجراح الفم والأسنان'}</p>
+                            </div>
+                            <img src="${printSettings.logoUrl}" class="logo" onerror="this.style.display='none'" />
+                            <div class="clinic-info">
+                                <h2>${printSettings.clinicName}</h2>
+                            </div>
+                        </div>
+                        <div class="invoice-title">بيان حساب / فاتورة (INVOICE)</div>
+                        <div class="patient-box">
+                            <span>اسم المريض: ${patient.name}</span>
+                            <span>التاريخ: ${today}</span>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 10%; text-align: center;">#</th>
+                                    <th style="width: 50%;">الإجراء الطبي</th>
+                                    <th style="width: 20%; text-align: center;">التاريخ</th>
+                                    <th style="width: 20%; text-align: left;">القيمة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rowsHtml}
+                            </tbody>
+                        </table>
+                        <div class="total-box">
+                            <span>إجمالي الفاتورة:</span>
+                            <span style="font-size: 22px; color: #b45309;">${invoiceTotal.toLocaleString()} ج.م</span>
+                        </div>
+                        <div class="footer">
+                            <div>العنوان: ${printSettings.address}</div>
+                            <div>تليفون: ${printSettings.phone}</div>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+            printWindow.document.write(html);
+            printWindow.document.close();
+
+            setTimeout(() => {
+                printWindow.focus();
+                printWindow.print();
+                printWindow.close();
+            }, 500);
+        };
+
+
+
+
     const [newProc, setNewProc] = useState({ name: '', price: '', date: selectedDate, notes: '' });
     const [newPayment, setNewPayment] = useState({ amount: '', date: selectedDate });
     const [newPlan, setNewPlan] = useState({ description: '', dateAdded: selectedDate });
@@ -4147,29 +4347,99 @@ const bookAppointment = (time, patientId, durationInMins, specificDate = selecte
                         )}
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                            {/* الإجراءات المنفذة */}
-                            <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-                                <h3 className="font-bold text-sm mb-4 bg-brand-light p-3 rounded-xl flex gap-2 text-brand-navy"><i className="fa-solid fa-syringe text-brand-navy"></i> الإجراءات المنفذة</h3>
-                                <div className="border p-3 rounded-xl mb-4 space-y-3">
-                                    <input type="text" placeholder="اسم الإجراء (مثال: حشو عصب 6 سفلي)" className="w-full bg-slate-50 border p-2.5 rounded-lg text-sm outline-none" value={newProc.name} onChange={e=>setNewProc({...newProc, name: e.target.value})} />
-                                    <div className="flex gap-2"><input type="number" placeholder="التكلفة" className="w-1/2 bg-slate-50 border p-2.5 rounded-lg text-sm font-bold outline-none" value={newProc.price} onChange={e=>setNewProc({...newProc, price: e.target.value})} /><input type="date" className="w-1/2 bg-slate-50 border p-2.5 rounded-lg text-sm outline-none" value={newProc.date} onChange={e=>setNewProc({...newProc, date: e.target.value})} /></div>
-                                    <button onClick={() => { if(newProc.name && newProc.price) { handleAddItemToPatient(patient.id, 'procedures', newProc); setNewProc({ name: '', price: '', date: selectedDate, notes: '' }); } }} className="w-full bg-brand-navy text-brand-gold rounded-lg p-2.5 font-bold text-sm shadow-sm hover:bg-brand-blue">أضف الإجراء</button>
-                                </div>
-                                <div className="space-y-2 max-h-48 overflow-y-auto">
-                                    {(patient.procedures || []).map(p => (
-                                        <div key={p.id} className="p-3 border rounded-xl bg-slate-50 flex justify-between items-center text-sm">
-                                            <div><span className="font-bold block">{p.name}</span><span className="text-[10px] text-slate-500">{p.date}</span></div>
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-brand-navy font-bold bg-brand-light px-2 py-1 rounded">{p.price} ج</span>
-                                                {userRole === 'admin' && (
-                                                    <button onClick={()=>handleDeleteItemFromPatient(patient.id, 'procedures', p.id)} className="text-red-400"><i className="fa-solid fa-trash"></i></button>
-                                                )}
-                                            </div>
+{/* الإجراءات المنفذة والفاتورة */}
+                            <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                                <div>
+                                    <div className="flex justify-between items-center mb-4 bg-brand-light p-3 rounded-xl">
+                                        <h3 className="font-bold text-sm flex items-center gap-2 text-brand-navy"><i className="fa-solid fa-syringe text-brand-navy"></i> الإجراءات المنفذة</h3>
+                                        {(patient.procedures && patient.procedures.length > 0) && (
+                                            <label className="flex items-center gap-1.5 text-xs font-bold text-brand-navy cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-brand-gold/40 shadow-sm">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={selectedInvoiceProcs.length === patient.procedures.length && patient.procedures.length > 0}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) setSelectedInvoiceProcs(patient.procedures.map(p => p.id));
+                                                        else setSelectedInvoiceProcs([]);
+                                                    }}
+                                                    className="w-4 h-4 accent-brand-navy rounded cursor-pointer"
+                                                />
+                                                تحديد الكل للفاتورة
+                                            </label>
+                                        )}
+                                    </div>
+
+                                    <div className="border p-3 rounded-xl mb-4 space-y-3">
+                                        <input type="text" placeholder="اسم الإجراء (مثال: حشو عصب 6 سفلي)" className="w-full bg-slate-50 border p-2.5 rounded-lg text-sm outline-none" value={newProc.name} onChange={e=>setNewProc({...newProc, name: e.target.value})} />
+                                        <div className="flex gap-2">
+                                            <input type="number" placeholder="التكلفة" className="w-1/2 bg-slate-50 border p-2.5 rounded-lg text-sm font-bold outline-none" value={newProc.price} onChange={e=>setNewProc({...newProc, price: e.target.value})} />
+                                            <input type="date" className="w-1/2 bg-slate-50 border p-2.5 rounded-lg text-sm outline-none" value={newProc.date} onChange={e=>setNewProc({...newProc, date: e.target.value})} />
                                         </div>
-                                    ))}
+                                        <button onClick={() => { if(newProc.name && newProc.price) { handleAddItemToPatient(patient.id, 'procedures', newProc); setNewProc({ name: '', price: '', date: selectedDate, notes: '' }); } }} className="w-full bg-brand-navy text-brand-gold rounded-lg p-2.5 font-bold text-sm shadow-sm hover:bg-brand-blue">أضف الإجراء</button>
+                                    </div>
+
+                                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1 mb-4">
+                                        {(patient.procedures || []).map(p => {
+                                            const isSelected = selectedInvoiceProcs.includes(p.id);
+                                            return (
+                                                <div key={p.id} onClick={() => toggleInvoiceProc(p.id)} className={`p-3 border rounded-xl flex justify-between items-center text-sm cursor-pointer transition-all ${isSelected ? 'bg-amber-50/70 border-brand-gold shadow-sm' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}`}>
+                                                    <div className="flex items-center gap-3">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={isSelected}
+                                                            onChange={() => {}} 
+                                                            className="w-4 h-4 accent-brand-navy rounded cursor-pointer"
+                                                        />
+                                                        <div>
+                                                            <span className="font-bold block text-slate-800">{p.name}</span>
+                                                            <span className="text-[10px] text-slate-500">{p.date}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
+                                                        <span className="text-brand-navy font-bold bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-sm">{p.price} ج</span>
+                                                        {userRole === 'admin' && (
+                                                            <button onClick={()=>handleDeleteItemFromPatient(patient.id, 'procedures', p.id)} className="text-red-400 hover:text-red-600"><i className="fa-solid fa-trash"></i></button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                            </div>
-                            
+
+                                {/* شريط الفاتورة والطباعة وإعدادات البيانات */}
+                                <div className="border-t pt-3 mt-2">
+                                    <div className="flex justify-between items-center bg-slate-100 p-3 rounded-xl mb-3 border border-slate-200">
+                                        <span className="text-xs font-bold text-slate-600">إجمالي المحدد للفاتورة ({selectedInvoiceProcs.length} إجراءات):</span>
+                                        <span className="text-base font-black text-brand-navy">
+                                            {(patient.procedures || []).filter(p => selectedInvoiceProcs.includes(p.id)).reduce((sum, p) => sum + Number(p.price || 0), 0).toLocaleString()} ج.م
+                                        </span>
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        <button onClick={handlePrintInvoice} className="flex-1 bg-brand-gold hover:bg-yellow-500 text-brand-navy py-3 rounded-xl text-sm font-bold shadow-md flex justify-center items-center gap-2 transition-colors">
+                                            <i className="fa-solid fa-print"></i> طباعة فاتورة للمحدد (A5)
+                                        </button>
+                                        <button onClick={() => setShowInvoiceSettings(!showInvoiceSettings)} className="w-12 bg-slate-200 hover:bg-slate-300 text-brand-navy rounded-xl flex justify-center items-center shadow-sm" title="إعدادات بيانات الفاتورة">
+                                            <i className="fa-solid fa-gear"></i>
+                                        </button>
+                                    </div>
+
+                                    {/* خانات بيانات العيادة والدكتور للفاتورة */}
+                                    {showInvoiceSettings && (
+                                        <div className="bg-slate-800 p-3 rounded-xl mt-3 text-white text-[10px] grid grid-cols-2 gap-2 animate-fade-in">
+                                            <input type="text" placeholder="اسم الطبيب" value={printSettings.doctorName || ''} onChange={e=>{const s={...printSettings, doctorName:e.target.value}; setPrintSettings(s); localStorage.setItem('smile_print_settings', JSON.stringify(s));}} className="bg-slate-700 p-2 rounded outline-none" />
+                                            <input type="text" placeholder="اسم العيادة" value={printSettings.clinicName || ''} onChange={e=>{const s={...printSettings, clinicName:e.target.value}; setPrintSettings(s); localStorage.setItem('smile_print_settings', JSON.stringify(s));}} className="bg-slate-700 p-2 rounded outline-none" />
+                                            <input type="text" placeholder="التخصص (مثال: أخصائي تقويم وجراحة الفم والأسنان)" value={printSettings.specialty ?? 'طبيب وجراح الفم والأسنان'} onChange={e=>{const s={...printSettings, specialty:e.target.value}; setPrintSettings(s); localStorage.setItem('smile_print_settings', JSON.stringify(s));}} className="bg-slate-700 p-2 rounded outline-none col-span-2" />
+                                            <input type="text" placeholder="العنوان" value={printSettings.address || ''} onChange={e=>{const s={...printSettings, address:e.target.value}; setPrintSettings(s); localStorage.setItem('smile_print_settings', JSON.stringify(s));}} className="bg-slate-700 p-2 rounded outline-none col-span-2" />
+                                            <input type="text" placeholder="الهاتف" value={printSettings.phone || ''} onChange={e=>{const s={...printSettings, phone:e.target.value}; setPrintSettings(s); localStorage.setItem('smile_print_settings', JSON.stringify(s));}} className="bg-slate-700 p-2 rounded outline-none" />
+                                            <input type="text" placeholder="رابط اللوجو" value={printSettings.logoUrl || ''} onChange={e=>{const s={...printSettings, logoUrl:e.target.value}; setPrintSettings(s); localStorage.setItem('smile_print_settings', JSON.stringify(s));}} className="bg-slate-700 p-2 rounded outline-none text-left" dir="ltr" />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>   
+
+
+                         
                             {/* دفع نقدية */}
                             <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                                 <h3 className="font-bold text-sm mb-4 bg-green-50 p-3 rounded-xl flex gap-2 text-green-900"><i className="fa-solid fa-money-bill-wave text-green-500"></i> دفع نقدية</h3>
@@ -4198,49 +4468,51 @@ const bookAppointment = (time, patientId, durationInMins, specificDate = selecte
 
 
 
-                {patientTab === 'rx' && (
+{patientTab === 'rx' && (
                     <div className="animate-fade-in space-y-4">
                         <DentalChart patientId={patient.id} chartData={patient.dentalChart || []} onUpdateChart={handleUpdateDentalChart} />
-{/* قائمة الخريطة السنية المنظمة */}
-<div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 mt-4 mb-4">
-    <h3 className="font-bold text-sm mb-3 text-slate-800 border-b pb-2">
-        <i className="fa-solid fa-list-check text-brand-navy ml-1"></i> سجل الخريطة السنية التفصيلي
-    </h3>
-    <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-        {(!patient.dentalChart || patient.dentalChart.length === 0) ? (
-            <p className="text-center text-xs text-slate-400 font-bold py-4">لم يتم تسجيل أي أسنان في الخريطة حتى الآن.</p>
-        ) : (
-            patient.dentalChart.map(item => (
-                <div key={item.id} className={`p-3 border rounded-xl flex justify-between items-center text-sm shadow-sm ${item.type === 'planned' ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
-                    <div>
-                        <span className={`px-2 py-1 rounded text-xs font-bold text-white ml-2 ${item.type === 'planned' ? 'bg-red-500' : 'bg-green-500'}`}>
-                            سن {item.displayNum}
-                        </span>
-                        <span className={`font-bold ${item.type === 'planned' ? 'text-red-800' : 'text-green-800'}`}>{item.desc}</span>
-                        {item.needed && <span className="text-xs text-slate-600 block mt-1"><i className="fa-solid fa-arrow-turn-down ml-1"></i>يحتاج: {item.needed}</span>}
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                        <span className="text-[10px] text-slate-500 font-bold">{item.date}</span>
-                        <button onClick={() => handleUpdateDentalChart({ id: item.id, delete: true })} className="text-red-400 hover:text-red-600"><i className="fa-solid fa-trash"></i></button>
-                    </div>
-                </div>
-            ))
-        )}
-    </div>
-</div>
+                        {/* قائمة الخريطة السنية المنظمة */}
+                        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 mt-4 mb-4">
+                            <h3 className="font-bold text-sm mb-3 text-slate-800 border-b pb-2">
+                                <i className="fa-solid fa-list-check text-brand-navy ml-1"></i> سجل الخريطة السنية التفصيلي
+                            </h3>
+                            <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+                                {(!patient.dentalChart || patient.dentalChart.length === 0) ? (
+                                    <p className="text-center text-xs text-slate-400 font-bold py-4">لم يتم تسجيل أي أسنان في الخريطة حتى الآن.</p>
+                                ) : (
+                                    patient.dentalChart.map(item => (
+                                        <div key={item.id} className={`p-3 border rounded-xl flex justify-between items-center text-sm shadow-sm ${item.type === 'planned' ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+                                            <div>
+                                                <span className={`px-2 py-1 rounded text-xs font-bold text-white ml-2 ${item.type === 'planned' ? 'bg-red-500' : 'bg-green-500'}`}>
+                                                    سن {item.displayNum}
+                                                </span>
+                                                <span className={`font-bold ${item.type === 'planned' ? 'text-red-800' : 'text-green-800'}`}>{item.desc}</span>
+                                                {item.needed && <span className="text-xs text-slate-600 block mt-1"><i className="fa-solid fa-arrow-turn-down ml-1"></i>يحتاج: {item.needed}</span>}
+                                            </div>
+                                            <div className="flex flex-col items-end gap-1">
+                                                <span className="text-[10px] text-slate-500 font-bold">{item.date}</span>
+                                                <button onClick={() => handleUpdateDentalChart({ id: item.id, delete: true })} className="text-red-400 hover:text-red-600"><i className="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                            <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-                              <div className="flex justify-between items-center border-b pb-2 mb-3">
-    <h3 className="font-bold text-sm text-slate-800"><i className="fa-solid fa-list-check text-brand-navy ml-1"></i>خطة العلاج</h3>
-    <button onClick={handleGenerateAiPlan} disabled={isAiPlanLoading} className="bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 shadow-sm">
-        {isAiPlanLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-wand-magic-sparkles"></i>} اقتراح بالذكاء الاصطناعي
-    </button>
-</div>
+                            {/* قسم خطة العلاج */}
+                            <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col h-full">
+                                <div className="flex justify-between items-center border-b pb-2 mb-3">
+                                    <h3 className="font-bold text-sm text-slate-800"><i className="fa-solid fa-list-check text-brand-navy ml-1"></i>خطة العلاج</h3>
+                                    <button onClick={handleGenerateAiPlan} disabled={isAiPlanLoading} className="bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 shadow-sm">
+                                        {isAiPlanLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-wand-magic-sparkles"></i>} اقتراح بالذكاء الاصطناعي
+                                    </button>
+                                </div>
                                 <div className="flex gap-2 mb-3">
                                     <input type="text" placeholder="ما يحتاجه لاحقاً..." className="flex-1 border p-3 rounded-xl text-sm bg-slate-50 outline-none" value={newPlan.description} onChange={e=>setNewPlan({...newPlan, description: e.target.value})} />
                                     <button onClick={() => { if(newPlan.description) { handleAddItemToPatient(patient.id, 'futurePlans', newPlan); setNewPlan({ description: '', dateAdded: selectedDate }); } }} className="bg-brand-navy text-brand-gold px-4 rounded-xl font-bold text-sm">إضافة</button>
                                 </div>
-                                <div className="space-y-2 max-h-64 overflow-y-auto">
+                                <div className="space-y-2 flex-1 overflow-y-auto max-h-[450px]">
                                     {(patient.futurePlans || []).map(plan => (
                                         <div key={plan.id} className="p-3 border rounded-xl bg-slate-50 flex justify-between items-center text-sm">
                                             <span className="truncate flex-1 font-medium text-slate-700">{plan.description}</span>
@@ -4249,19 +4521,108 @@ const bookAppointment = (time, patientId, durationInMins, specificDate = selecte
                                     ))}
                                 </div>
                             </div>
-                            <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-                              <div className="flex justify-between items-center border-b pb-2 mb-3">
-    <h3 className="font-bold text-sm text-slate-800"><i className="fa-solid fa-prescription-bottle-medical text-brand-gold ml-1"></i>الروشتات</h3>
-    <label className="bg-brand-navy hover:bg-brand-blue text-brand-gold px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors flex items-center gap-1 shadow-sm">
-        {isAiRxLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-camera"></i>} قراءة روشتة (AI)
-        <input type="file" accept="image/*" capture="environment" onChange={handleSmartRxUpload} className="hidden" />
-    </label>
-</div>
-                                <div className="flex flex-col gap-2 mb-3">
-                                    <textarea placeholder="الأدوية والجرعات..." className="h-24 border p-3 rounded-xl text-sm bg-slate-50 resize-none outline-none" value={newRx.details} onChange={e=>setNewRx({...newRx, details: e.target.value})}></textarea>
-                                    <button onClick={() => { if(newRx.details) { handleAddItemToPatient(patient.id, 'prescriptions', newRx); setNewRx({ details: '', date: selectedDate }); } }} className="bg-brand-navy text-brand-gold py-3 rounded-xl font-bold text-sm">حفظ الروشتة</button>
+
+                            {/* قسم الروشتات المطور */}
+                            <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col h-full">
+                                <div className="flex justify-between items-center border-b pb-2 mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-bold text-sm text-slate-800"><i className="fa-solid fa-prescription-bottle-medical text-brand-gold ml-1"></i>الروشتات</h3>
+                                        <button onClick={() => setRxItems([{ name: '', type: 'أقراص (Tab)', dose: '' }])} className="text-red-400 hover:text-red-600 bg-red-50 w-7 h-7 rounded-full flex items-center justify-center transition-colors" title="مسح الروشتة الحالية">
+                                            <i className="fa-solid fa-trash text-xs"></i>
+                                        </button>
+                                    </div>
+                                    <label className="bg-brand-navy hover:bg-brand-blue text-brand-gold px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors flex items-center gap-1 shadow-sm">
+                                        {isAiRxLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-camera"></i>} قراءة روشتة (AI)
+                                        <input type="file" accept="image/*" capture="environment" onChange={handleSmartRxUpload} className="hidden" />
+                                    </label>
                                 </div>
-                                <div className="space-y-2 max-h-64 overflow-y-auto">
+                                
+                                {/* الروشتات الجاهزة (قوالب) */}
+                                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 mb-3">
+                                    <h4 className="text-[10px] font-bold text-slate-500 mb-2"><i className="fa-solid fa-bookmark text-brand-gold"></i> الروشتات الجاهزة:</h4>
+                                    <div className="flex flex-wrap gap-1.5 mb-2">
+                                        {rxTemplates.map((tpl, i) => (
+                                            <div key={i} className="flex items-center bg-white border border-brand-gold/50 rounded-lg overflow-hidden shadow-sm">
+                                                <button onClick={() => setRxItems(tpl.items)} className="text-brand-navy px-2 py-1 text-xs font-bold hover:bg-brand-gold/10">
+                                                    {tpl.name}
+                                                </button>
+                                                <button onClick={() => {
+                                                    const newTpls = rxTemplates.filter((_, index) => index !== i);
+                                                    setRxTemplates(newTpls);
+                                                    localStorage.setItem('smile_rx_templates', JSON.stringify(newTpls));
+                                                }} className="bg-red-50 text-red-500 px-1.5 py-1 hover:bg-red-500 hover:text-white border-r">
+                                                    <i className="fa-solid fa-xmark text-[10px]"></i>
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="flex gap-1">
+                                        <input type="text" placeholder="اسم الروشتة (ورم، عصب)..." value={templateName} onChange={e=>setTemplateName(e.target.value)} className="flex-1 border p-1.5 rounded-lg text-xs font-bold outline-none" />
+                                        <button onClick={() => {
+                                            if(!templateName) return alert('اكتب اسم الروشتة أولاً');
+                                            const newTpls = [...rxTemplates, { name: templateName, items: rxItems }];
+                                            setRxTemplates(newTpls);
+                                            localStorage.setItem('smile_rx_templates', JSON.stringify(newTpls));
+                                            setTemplateName('');
+                                        }} className="bg-brand-gold text-brand-navy px-2 rounded-lg text-xs font-bold">حفظ كقالب</button>
+                                    </div>
+                                </div>
+
+                                {/* إدخال الأدوية بنظام الأسطر */}
+                                <div className="space-y-2 mb-3 max-h-48 overflow-y-auto pr-1">
+                                    {rxItems.map((item, index) => (
+                                        <div key={index} className="border border-slate-200 rounded-lg p-2 bg-white relative">
+                                            {rxItems.length > 1 && (
+                                                <button onClick={() => setRxItems(rxItems.filter((_, i) => i !== index))} className="absolute top-2 left-2 text-red-400">
+                                                    <i className="fa-solid fa-circle-minus"></i>
+                                                </button>
+                                            )}
+                                            <div className="flex gap-2 mb-2 pr-6">
+                                                <input type="text" value={item.name} onChange={e => { const newItems = [...rxItems]; newItems[index].name = e.target.value; setRxItems(newItems); }} className="flex-1 border p-1.5 rounded-md text-xs font-bold outline-none" placeholder="اسم الدواء..." dir="ltr" />
+                                                <select value={item.type} onChange={e => { const newItems = [...rxItems]; newItems[index].type = e.target.value; setRxItems(newItems); }} className="w-24 border p-1.5 rounded-md text-xs font-bold outline-none bg-slate-50">
+                                                    <option>أقراص (Tab)</option><option>كبسول (Cap)</option><option>شراب (Syr)</option><option>حقن (Amp)</option><option>مرهم (Oint)</option><option>مضمضة (M.W)</option><option>قطرة (Drops)</option><option>أخرى</option>
+                                                </select>
+                                            </div>
+                                            <input type="text" value={item.dose} onChange={e => { const newItems = [...rxItems]; newItems[index].dose = e.target.value; setRxItems(newItems); }} className="w-full bg-slate-50 border p-1.5 rounded-md text-xs outline-none" placeholder="الجرعة (مثال: قرص كل 12 ساعة)..." />
+                                        </div>
+                                    ))}
+                                    <button onClick={() => setRxItems([...rxItems, { name: '', type: 'أقراص (Tab)', dose: '' }])} className="w-full text-brand-navy text-xs font-bold py-1 border border-dashed rounded-lg hover:bg-slate-50">
+                                        + إضافة دواء
+                                    </button>
+                                </div>
+
+                                {/* أزرار التحكم والطباعة */}
+                                <div className="flex gap-2 mb-3">
+                                    <button onClick={() => {
+                                        const rxText = rxItems.filter(i=>i.name).map(i => `${i.name} (${i.type})\n${i.dose}`).join('\n\n');
+                                        if(!rxText) return showMessage('تنبيه', 'الروشتة فارغة!');
+                                        handleAddItemToPatient(patient.id, 'prescriptions', { details: rxText, date: selectedDate });
+                                        showMessage('نجاح', 'تم حفظ الروشتة في سجل المريض!');
+                                    }} className="flex-1 bg-brand-navy text-brand-gold py-2 rounded-xl text-xs font-bold">
+                                        حفظ للسجل
+                                    </button>
+                                    <button onClick={handlePrintRx} className="flex-1 bg-brand-gold text-brand-navy py-2 rounded-xl text-xs font-bold">
+                                        طباعة A5
+                                    </button>
+                                    <button onClick={() => setShowPrintSettings(!showPrintSettings)} className="w-10 bg-slate-200 text-brand-navy rounded-xl flex justify-center items-center">
+                                        <i className="fa-solid fa-gear"></i>
+                                    </button>
+                                </div>
+
+{/* إعدادات الطباعة */}
+                                {showPrintSettings && (
+                                    <div className="bg-slate-800 p-3 rounded-xl mb-3 text-white text-[10px] grid grid-cols-2 gap-2">
+                                        <input type="text" placeholder="اسم الطبيب" value={printSettings.doctorName || ''} onChange={e=>{const s={...printSettings, doctorName:e.target.value}; setPrintSettings(s); localStorage.setItem('smile_print_settings', JSON.stringify(s));}} className="bg-slate-700 p-1.5 rounded outline-none" />
+                                        <input type="text" placeholder="اسم العيادة" value={printSettings.clinicName || ''} onChange={e=>{const s={...printSettings, clinicName:e.target.value}; setPrintSettings(s); localStorage.setItem('smile_print_settings', JSON.stringify(s));}} className="bg-slate-700 p-1.5 rounded outline-none" />
+                                        <input type="text" placeholder="التخصص (مثال: أخصائي تقويم وجراحة الفم والأسنان)" value={printSettings.specialty ?? 'طبيب وجراح الفم والأسنان'} onChange={e=>{const s={...printSettings, specialty:e.target.value}; setPrintSettings(s); localStorage.setItem('smile_print_settings', JSON.stringify(s));}} className="bg-slate-700 p-1.5 rounded outline-none col-span-2" />
+                                        <input type="text" placeholder="العنوان" value={printSettings.address || ''} onChange={e=>{const s={...printSettings, address:e.target.value}; setPrintSettings(s); localStorage.setItem('smile_print_settings', JSON.stringify(s));}} className="bg-slate-700 p-1.5 rounded outline-none col-span-2" />
+                                        <input type="text" placeholder="الهاتف" value={printSettings.phone || ''} onChange={e=>{const s={...printSettings, phone:e.target.value}; setPrintSettings(s); localStorage.setItem('smile_print_settings', JSON.stringify(s));}} className="bg-slate-700 p-1.5 rounded outline-none" />
+                                        <input type="text" placeholder="رابط اللوجو" value={printSettings.logoUrl || ''} onChange={e=>{const s={...printSettings, logoUrl:e.target.value}; setPrintSettings(s); localStorage.setItem('smile_print_settings', JSON.stringify(s));}} className="bg-slate-700 p-1.5 rounded outline-none text-left" dir="ltr" />
+                                    </div>
+                                )}
+                                {/* سجل الروشتات السابقة */}
+                                <div className="space-y-2 flex-1 overflow-y-auto border-t pt-3">
+                                    <h4 className="text-xs font-bold text-slate-500 mb-2">السجل السابق:</h4>
                                     {(patient.prescriptions || []).map(rx => (
                                         <div key={rx.id} className="p-3 border rounded-xl bg-brand-light flex justify-between items-start text-sm">
                                             <span className="whitespace-pre-wrap leading-relaxed flex-1 text-slate-800 font-medium">{rx.details}</span>
@@ -4273,7 +4634,6 @@ const bookAppointment = (time, patientId, durationInMins, specificDate = selecte
                         </div>
                     </div>
                 )}
-
 {patientTab === 'appts' && (
                     <div className="animate-fade-in space-y-6 mt-4">
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-2xl mx-auto">
@@ -4741,15 +5101,13 @@ const bookAppointment = (time, patientId, durationInMins, specificDate = selecte
                 )}
                 
                 <button onClick={() => { showMessage('نجاح', 'تم حفظ البيانات!'); setCurrentView('patients'); }} className="w-full mt-6 bg-brand-navy hover:bg-brand-blue text-brand-gold font-bold py-4 rounded-xl shadow-lg transition-all active:scale-[0.98] flex justify-center items-center gap-2 border border-brand-gold/30">
-                    <i className="fa-solid fa-floppy-disk"></i> حفظ وتسجيل البيانات والعودة للرئيسية
-                </button>
-            </div>
-        </div>
-    );
-};
+<i className="fa-solid fa-floppy-disk"></i> حفظ وتسجيل البيانات والعودة للرئيسية
+                 </button>
+             </div>
+         </div>
+     );};
 
-const AppointmentsView = ({ selectedDate, setSelectedDate, appointments, setAppointments, patients, showMessage, showConfirm }) => {
-    // تبويب لتحديد طريقة العرض: القائمة أو الأجندة
+const AppointmentsView = ({ selectedDate, setSelectedDate, appointments, setAppointments, patients, showMessage, showConfirm }) => {    // تبويب لتحديد طريقة العرض: القائمة أو الأجندة
     const [apptTab, setApptTab] = useState('list'); 
     
     const slots = generateTimeSlots(); 
@@ -8284,13 +8642,11 @@ await db.collection('clinic_data').doc('chatSettings').set({ data: chatSettings,
             );
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
+const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
 
-
-
-<script>
+    <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js').then((reg) => {
@@ -8299,7 +8655,5 @@ await db.collection('clinic_data').doc('chatSettings').set({ data: chatSettings,
             });
         }
     </script>
-
-
 </body>
 </html>
