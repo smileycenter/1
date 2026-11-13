@@ -2592,7 +2592,33 @@ const PatientDetails = ({
 
     // متغيرات نظام الروشتات الذكية (بدون تكرار سطر تعريف الدالة فوقها)
     const [rxItems, setRxItems] = useState([{ name: '', type: 'أقراص (Tab)', dose: '' }]);
-    const [rxTemplates, setRxTemplates] = useState(() => JSON.parse(localStorage.getItem('smile_rx_templates')) || []);
+    const [rxTemplates, setRxTemplates] = useState(() => loadData('smile_rx_templates', []));
+
+    // جلب الروشتات الجاهزة من السحابة تلقائياً
+    useEffect(() => {
+        if (window.cloudSyncReady && window.firebaseDb) {
+            const unsub = window.firebaseDb.collection('clinic_data').doc('rxTemplates').onSnapshot(snap => {
+                if (snap.metadata.hasPendingWrites) return;
+                if (snap.exists && snap.data().data) {
+                    setRxTemplates(snap.data().data);
+                    saveData('smile_rx_templates', snap.data().data);
+                }
+            });
+            return () => unsub();
+        }
+    }, []);
+
+    // دالة حفظ وتحديث القوالب في الجهاز والسحابة معاً
+    const saveTemplatesToCloud = (newTpls) => {
+        setRxTemplates(newTpls);
+        saveData('smile_rx_templates', newTpls);
+        if (window.cloudSyncReady && window.firebaseDb && window.firebase) {
+            window.firebaseDb.collection('clinic_data').doc('rxTemplates').set({
+                data: newTpls,
+                updatedAt: window.firebase.firestore.FieldValue.serverTimestamp()
+            }).catch(e => console.error("خطأ في رفع الروشتات الجاهزة:", e));
+        }
+    };
 
     const [templateName, setTemplateName] = useState('');
     const [showPrintSettings, setShowPrintSettings] = useState(false);
@@ -4537,9 +4563,9 @@ const bookAppointment = (time, patientId, durationInMins, specificDate = selecte
                                     </label>
                                 </div>
                                 
-                                {/* الروشتات الجاهزة (قوالب) */}
+{/* الروشتات الجاهزة (قوالب) */}
                                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 mb-3">
-                                    <h4 className="text-[10px] font-bold text-slate-500 mb-2"><i className="fa-solid fa-bookmark text-brand-gold"></i> الروشتات الجاهزة:</h4>
+                                    <h4 className="text-[10px] font-bold text-slate-500 mb-2"><i className="fa-solid fa-bookmark text-brand-gold"></i> الروشتات الجاهزة (متزامنة سحابياً):</h4>
                                     <div className="flex flex-wrap gap-1.5 mb-2">
                                         {rxTemplates.map((tpl, i) => (
                                             <div key={i} className="flex items-center bg-white border border-brand-gold/50 rounded-lg overflow-hidden shadow-sm">
@@ -4548,8 +4574,7 @@ const bookAppointment = (time, patientId, durationInMins, specificDate = selecte
                                                 </button>
                                                 <button onClick={() => {
                                                     const newTpls = rxTemplates.filter((_, index) => index !== i);
-                                                    setRxTemplates(newTpls);
-                                                    localStorage.setItem('smile_rx_templates', JSON.stringify(newTpls));
+                                                    saveTemplatesToCloud(newTpls);
                                                 }} className="bg-red-50 text-red-500 px-1.5 py-1 hover:bg-red-500 hover:text-white border-r">
                                                     <i className="fa-solid fa-xmark text-[10px]"></i>
                                                 </button>
@@ -4561,12 +4586,14 @@ const bookAppointment = (time, patientId, durationInMins, specificDate = selecte
                                         <button onClick={() => {
                                             if(!templateName) return alert('اكتب اسم الروشتة أولاً');
                                             const newTpls = [...rxTemplates, { name: templateName, items: rxItems }];
-                                            setRxTemplates(newTpls);
-                                            localStorage.setItem('smile_rx_templates', JSON.stringify(newTpls));
+                                            saveTemplatesToCloud(newTpls);
                                             setTemplateName('');
+                                            showMessage('نجاح', 'تم حفظ الروشتة الجاهزة ورفعها للسحابة!');
                                         }} className="bg-brand-gold text-brand-navy px-2 rounded-lg text-xs font-bold">حفظ كقالب</button>
                                     </div>
                                 </div>
+
+
 
                                 {/* إدخال الأدوية بنظام الأسطر */}
                                 <div className="space-y-2 mb-3 max-h-48 overflow-y-auto pr-1">
@@ -8482,7 +8509,13 @@ useEffect(() => { saveData('smile_clinic_social_v1', socialPosts); syncToCloud('
                     await db.collection('clinic_data').doc('expenses').set({ data: expenses, updatedAt: ts });
 const googleConfig = loadData('smile_clinic_google_v12', { appsScriptUrl: 'https://script.google.com/macros/s/AKfycbybXcH9nVYhklY3rwYZZAk04HabWa1pyzAMI1b3roz8Cl3WEurWs6SoZ0tWXmPeaFJZ/exec', doctors: [] });
                     await db.collection('clinic_data').doc('settings').set({ data: googleConfig, updatedAt: ts });
-await db.collection('clinic_data').doc('chatSettings').set({ data: chatSettings, updatedAt: ts });
+const savedRxTemplates = loadData('smile_rx_templates', []);
+await db.collection('clinic_data').doc('rxTemplates').set({ data: savedRxTemplates, updatedAt: ts });
+
+
+
+
+
                     showMessage('نجاح', 'تم رفع ومزامنة كافة البيانات المحلية للسحابة بنجاح!');
                 } catch(e) {
                     console.error(e);
